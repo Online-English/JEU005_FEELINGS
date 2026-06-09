@@ -2,32 +2,28 @@
 let slideshowTimeout = null;
 let isSlideshowActive = false;
 let currentFlashIndex = 0;
-let quizTimeout = null;  // AJOUTÉ : Sécurise les transitions du quiz classique
-let speakTimeout = null; // AJOUTÉ : Sécurise les transitions de la prononciation
+let quizTimeout = null;  
+let speakTimeout = null; 
 
 let quizStep = 1, quizScore = 0, currentQuizItem = null;
-let currentSpeakItem = null, speakScore = 0; // CORRIGÉ : Bonnes variables déclarées ici
+let currentSpeakItem = null, speakScore = 0; 
 let selectedEnglishNode = null, selectedFrenchNode = null;
-let isProcessingMatch = false; // AJOUTÉ : Sécurité anti-clics abusifs
+let isProcessingMatch = false; 
 
-// Variables pour le mode Contre-la-montre (Time Attack)
 let taTimerInterval = null;
 let taTimeout = null;
 let taTimeLeft = 60;
 let taScore = 0;
 let currentTAItem = null;
 
-// --- INITIALISATION DES COMPOSANTS AU DEMARRAGE ---
 window.onload = () => {
-    loadStats(); // Charge les données du localStorage via script.js
+    loadStats(); 
     
-    // Remplissage initial des scores dans l'interface
     document.getElementById('stat-high-quiz').innerText = highScores.quiz;
     document.getElementById('stat-high-speak').innerText = highScores.speak || 0;
     document.getElementById('stat-high-timeattack').innerText = highScores.timeattack || 0;
     document.getElementById('stat-max-streak').innerText = maxStreak;
     
-    // Force la vérification des cadenas et affichage initial
     updateLevelLockUI();
     renderDict();
     updateFlashcard();
@@ -35,22 +31,18 @@ window.onload = () => {
     renderErrorHistory();
 };
 
-// --- MULTI-THÈMES : SELECTIONNEUR DE NIVEAU DE VOCABULAIRE ---
 function setVocabLevel(level) {
     selectedVocabularyLevel = parseInt(level);
     
-    // Réinitialise le style visuel de tous les boutons de niveau
     document.querySelectorAll('#vocab-level-selector button').forEach(btn => {
         if (!btn.disabled) {
-            btn.className = "p-2 rounded-lg font-bold text-xs bg-gray-100 text-brandBlue dark:bg-gray-700 dark:text-gray-200 border transition hover:border-brandOrange";
+            btn.className = "p-3 rounded-xl font-extrabold text-xs bg-slate-900/60 text-slate-300 border border-slate-700 hover:border-brandPurple transition-all";
         }
     });
     
-    // Active le bouton cliqué
     const activeBtn = document.getElementById(`btn-vlevel-${level}`);
-    activeBtn.className = "p-2 rounded-lg font-bold text-xs bg-brandBlue text-white border border-brandBlue transition";
+    activeBtn.className = "p-3 rounded-xl font-extrabold text-xs bg-brandPurple text-white shadow-md shadow-brandPurple/20 border border-brandPurple transition-all";
     
-    // Actualise les modules dépendants de la liste de mots
     renderDict();
     updateFlashcard();
     resetQuizToMenu();
@@ -66,49 +58,43 @@ function updateLevelLockUI() {
 
     if (playerLevel >= 5) {
         btn2.disabled = false;
-        btn2.innerHTML = "Sentiments Niv.2 (40)";
+        btn2.innerHTML = "🔒 Débloqué ! Niv.2";
         if (selectedVocabularyLevel !== 2) {
-            btn2.className = "p-2 rounded-lg font-bold text-xs bg-gray-100 text-brandBlue dark:bg-gray-700 dark:text-gray-200 border transition hover:border-brandOrange";
+            btn2.className = "p-3 rounded-xl font-extrabold text-xs bg-slate-900/60 text-slate-300 border border-slate-700 hover:border-brandPurple transition-all";
         }
     } else {
         btn2.disabled = true;
         btn2.innerHTML = '<i class="fa-solid fa-lock text-[10px]"></i> Niv.2 (40)';
-        btn2.className = "p-2 rounded-lg font-bold text-xs bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 border cursor-not-allowed flex items-center justify-center gap-1 transition";
+        btn2.className = "p-3 rounded-xl font-extrabold text-xs bg-slate-900/30 text-slate-600 border border-slate-800/80 cursor-not-allowed flex items-center justify-center gap-1 transition-all";
         if (selectedVocabularyLevel === 2) selectedVocabularyLevel = 1; 
     }
     
     if (playerLevel >= 10) {
         btn3.disabled = false;
-        btn3.innerHTML = "Sentiments Niv.3 (60)";
+        btn3.innerHTML = "⚡ Élite ! Niv.3";
         if (selectedVocabularyLevel !== 3) {
-            btn3.className = "p-2 rounded-lg font-bold text-xs bg-gray-100 text-brandBlue dark:bg-gray-700 dark:text-gray-200 border transition hover:border-brandOrange";
+            btn3.className = "p-3 rounded-xl font-extrabold text-xs bg-slate-900/60 text-slate-300 border border-slate-700 hover:border-brandPurple transition-all";
         }
     } else {
         btn3.disabled = true;
         btn3.innerHTML = '<i class="fa-solid fa-lock text-[10px]"></i> Niv.3 (60)';
-        btn3.className = "p-2 rounded-lg font-bold text-xs bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 border cursor-not-allowed flex items-center justify-center gap-1 transition";
+        btn3.className = "p-3 rounded-xl font-extrabold text-xs bg-slate-900/30 text-slate-600 border border-slate-800/80 cursor-not-allowed flex items-center justify-center gap-1 transition-all";
         if (selectedVocabularyLevel === 3) selectedVocabularyLevel = 1; 
     }
 
     if (playerLevel >= 10) {
-        hint.innerText = "Félicitations ! Toutes les listes de vocabulaire sont accessibles.";
+        hint.innerHTML = "🎉 <span class='text-brandGreen font-bold'>GG ! Tout le pack émotionnel est débloqué !</span>";
     } else if (playerLevel >= 5) {
-        hint.innerText = "Objectif : Atteignez le niveau joueur 10 pour débloquer la liste ultime (Niveau 3) !";
+        hint.innerText = "🚀 Objectif : Atteins le niveau de compte 10 pour le pack Ultime !";
     } else {
-        hint.innerText = "Astuce : Atteignez le niveau joueur 5 pour débloquer le Niveau 2 !";
-    }
-    if (selectedVocabularyLevel === 1) {
-        const btn1 = document.getElementById('btn-vlevel-1');
-        if (btn1) btn1.className = "p-2 rounded-lg font-bold text-xs bg-brandBlue text-white border border-brandBlue transition";
+        hint.innerText = "🔒 Bloqué : Passe niveau 5 pour le Pack Intermédiaire (Niv.2)";
     }
 }
 
-// --- INTERCEPTEUR DE CHANGEMENT D'ONGLET ---
 function switchTab(event, tabName) {
     stopSlideshow();
     stopTimeAttack();
     
-    // FIX : Annule les files d'attente du quiz et de la prononciation pour éviter les alertes fantômes
     if (quizTimeout) clearTimeout(quizTimeout);
     if (speakTimeout) clearTimeout(speakTimeout);
     
@@ -116,12 +102,12 @@ function switchTab(event, tabName) {
 
     document.querySelectorAll('.tab-content').forEach(el => { el.classList.add('hidden'); el.classList.remove('active'); });
     document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.className = "tab-btn bg-gray-100 dark:bg-gray-700 text-brandBlue dark:text-gray-200 px-4 py-2 rounded-lg font-medium text-sm transition";
+        btn.className = "tab-btn bg-slate-800 text-slate-300 border border-slate-700 px-4 py-2.5 rounded-xl font-bold text-sm transition-all hover:bg-slate-700 hover:text-white";
     });
 
     const targetTab = document.getElementById(`tab-${tabName}`);
     targetTab.classList.remove('hidden'); targetTab.classList.add('active');
-    event.currentTarget.className = "tab-btn bg-brandBlue text-white px-4 py-2 rounded-lg font-medium text-sm transition";
+    event.currentTarget.className = "tab-btn bg-brandPurple text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-brandPurple/20 hover:scale-105 active:scale-95";
 
     document.getElementById('autoplay-container').className = tabName === 'flash' ? "flex items-center gap-2" : "hidden";
 
@@ -133,7 +119,6 @@ function switchTab(event, tabName) {
     }
 }
 
-// --- COMMUNICATEUR DE RÉSULTAT (Vérifie les séries & Badges de Série) ---
 function processAnswerResult(isCorrect) {
     if (isCorrect) {
         currentStreak++;
@@ -142,8 +127,6 @@ function processAnswerResult(isCorrect) {
         totalPoints += 10;
         document.getElementById('total-points').innerText = totalPoints;
         updateLevelAndTitle();
-        
-        // Badge débloqué si l'élève enchaîne 15 réponses
         if (currentStreak >= 15) checkAndUnlockBadge("streak_15");
     } else {
         currentStreak = 0;
@@ -154,7 +137,6 @@ function processAnswerResult(isCorrect) {
     saveStats();
 }
 
-// --- MODULE 1 : DICTIONNAIRE INVERSÉ ---
 function toggleDirectionDico() {
     searchDirection = (searchDirection === 'EN_FR') ? 'FR_EN' : 'EN_FR';
     document.getElementById('direction-label').innerText = (searchDirection === 'EN_FR') ? 'FR ➔ EN' : 'EN ➔ FR';
@@ -167,38 +149,37 @@ function renderDict(data = null) {
     if (!container) return;
     container.innerHTML = '';
     
-    // Si aucune donnée filtrée n'est passée, on charge par défaut le pack de vocabulaire sélectionné
     if (data === null) {
         data = fruitsData.filter(f => f.level === selectedVocabularyLevel);
     }
 
     if(data.length === 0) {
-    container.innerHTML = `<p class="text-center text-sm py-4 text-gray-400">Aucun sentiment trouvé dans ce niveau.</p>`;
-    return;
-}
+        container.innerHTML = `<p class="text-center text-sm py-8 text-slate-500 font-bold italic">Aucun sentiment trouvé avec ces filtres.</p>`;
+        return;
+    }
 
     data.forEach(item => {
         const isFav = favoriteFruits.includes(item.en);
         const div = document.createElement('div');
-        div.className = "bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex justify-between items-center cursor-pointer active:bg-gray-100 dark:active:bg-gray-700 transition duration-150";
+        div.className = "bg-slate-800 border border-slate-700/60 p-4 rounded-2xl shadow-md flex justify-between items-center cursor-pointer hover:border-brandPurple/60 hover:bg-slate-700/50 transition-all duration-200 group";
         div.onclick = () => playAudio(item.en);
         
         const primaryText = (searchDirection === 'EN_FR') ? item.en : item.fr;
         const secondaryText = (searchDirection === 'EN_FR') ? item.fr : item.en;
 
         div.innerHTML = `
-            <div class="flex items-center gap-3">
-                <span class="text-3xl">${item.emoji}</span>
+            <div class="flex items-center gap-4">
+                <span class="text-4xl group-hover:scale-110 transition-transform duration-200">${item.emoji}</span>
                 <div>
-                    <p class="font-bold text-sm sm:text-base text-brandBlue dark:text-white">${primaryText}</p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">${secondaryText}</p>
+                    <p class="font-extrabold text-base text-slate-100">${primaryText}</p>
+                    <p class="text-xs text-slate-400 font-medium font-mono">${secondaryText}</p>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
-                <button onclick="toggleFavorite('${item.en}', event)" class="p-2 text-base sm:text-xl transition text-gray-300 dark:text-gray-600 hover:text-yellow-400">
-                    <i class="${isFav ? 'fa-solid text-yellow-400' : 'fa-regular'} fa-star"></i>
+            <div class="flex items-center gap-3">
+                <button onclick="toggleFavorite('${item.en}', event)" class="p-2 text-xl transition-all text-slate-600 hover:text-amber-400">
+                    <i class="${isFav ? 'fa-solid text-amber-400' : 'fa-regular'} fa-star"></i>
                 </button>
-                <span class="text-brandBlue dark:text-gray-400 p-2 text-base sm:text-lg"><i class="fa-solid fa-volume-high"></i></span>
+                <span class="text-brandPurple bg-brandPurple/10 border border-brandPurple/20 rounded-xl p-2.5 text-base shadow-sm group-hover:bg-brandPurple group-hover:text-white transition-all"><i class="fa-solid fa-volume-high"></i></span>
             </div>
         `;
         container.appendChild(div);
@@ -220,19 +201,18 @@ function toggleFavorite(englishName, event) {
     const index = favoriteFruits.indexOf(englishName);
     if (index > -1) favoriteFruits.splice(index, 1);
     else favoriteFruits.push(englishName);
-    localStorage.setItem('oe_fav_feel', JSON.stringify(favoriteFruits)); // Alignement clé feel
+    localStorage.setItem('oe_fav_feel', JSON.stringify(favoriteFruits)); 
     filterWords();
 }
 
 function toggleFavFilter() {
     filterOnlyFavs = !filterOnlyFavs;
     document.getElementById('fav-filter-btn').className = filterOnlyFavs 
-        ? "px-4 bg-yellow-500 text-white border-2 border-yellow-500 rounded-xl transition"
-        : "px-4 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-gray-400 hover:text-yellow-500 transition";
+        ? "px-4 bg-amber-400 border-2 border-amber-400 text-slate-950 rounded-2xl transition shadow-lg shadow-amber-400/20"
+        : "px-4 bg-slate-800 border-2 border-slate-700/80 rounded-2xl text-slate-500 hover:text-amber-400 hover:border-amber-400/50 transition-all shadow-sm";
     filterWords();
 }
 
-// --- MODULE 2 : FLASHCARDS & DIAPORAMA ---
 function updateFlashcard() {
     const card = document.getElementById('main-flashcard');
     if (!card) return;
@@ -266,12 +246,12 @@ function prevFlashcard() {
 function toggleSlideshow() { if (isSlideshowActive) stopSlideshow(); else startSlideshow(); }
 function startSlideshow() {
     isSlideshowActive = true;
-    document.getElementById('slideshow-btn').className = "bg-red-500 text-white px-4 py-2 rounded-xl text-sm font-bold shadow transition hover:scale-105 active:scale-95";
-    document.getElementById('slideshow-btn').innerHTML = `<i class="fa-solid fa-square mr-1"></i> Arrêter le Diaporama`;
+    document.getElementById('slideshow-btn').className = "bg-brandPink text-white px-5 py-2.5 rounded-2xl text-sm font-extrabold shadow-lg shadow-brandPink/30 transition-all hover:scale-105 active:scale-95 border border-brandPink";
+    document.getElementById('slideshow-btn').innerHTML = `<i class="fa-solid fa-square mr-1.5"></i> Stop Diaporama`;
     document.getElementById('flash-prev-btn').disabled = true;
     document.getElementById('flash-next-btn').disabled = true;
-    document.getElementById('flash-prev-btn').classList.add('opacity-40');
-    document.getElementById('flash-next-btn').classList.add('opacity-40');
+    document.getElementById('flash-prev-btn').classList.add('opacity-30');
+    document.getElementById('flash-next-btn').classList.add('opacity-30');
     runSlideshowLoop();
 }
 
@@ -280,13 +260,13 @@ function stopSlideshow() {
     clearTimeout(slideshowTimeout);
     const btn = document.getElementById('slideshow-btn');
     if (btn) {
-        btn.className = "bg-brandGreen text-white px-4 py-2 rounded-xl text-sm font-bold shadow transition hover:scale-105 active:scale-95";
-        btn.innerHTML = `<i class="fa-solid fa-play mr-1"></i> Mode Diaporama`;
+        btn.className = "bg-brandGreen text-slate-950 px-5 py-2.5 rounded-2xl text-sm font-extrabold shadow-lg shadow-brandGreen/20 transition-all hover:scale-105 active:scale-95";
+        btn.innerHTML = `<i class="fa-solid fa-play mr-1.5"></i> Lancer le Mode Diaporama`;
     }
     const pB = document.getElementById('flash-prev-btn');
     if(pB) {
-        pB.disabled = false; pB.classList.remove('opacity-40');
-        document.getElementById('flash-next-btn').disabled = false; document.getElementById('flash-next-btn').classList.remove('opacity-40');
+        pB.disabled = false; pB.classList.remove('opacity-30');
+        document.getElementById('flash-next-btn').disabled = false; document.getElementById('flash-next-btn').classList.remove('opacity-30');
     }
     const card = document.getElementById('main-flashcard');
     if (card) card.classList.remove('flipped');
@@ -307,18 +287,16 @@ function runSlideshowLoop() {
             currentFlashIndex = (currentFlashIndex + 1) % activeLevelWords.length;
             updateFlashcard();
             runSlideshowLoop();
-        }, 3000);
+        }, 3200);
     }, 2500);
 }
 
-// --- MODULE 3 : GESTIONNAIRE D'ÉCRANS DU QUIZ ---
 function resetQuizToMenu() {
     document.getElementById('quiz-mode-menu').classList.remove('hidden');
     document.getElementById('quiz-classic-zone').classList.add('hidden');
     document.getElementById('quiz-timeattack-zone').classList.add('hidden');
 }
 
-// --- QUIZ CLASSIQUE (QCM AVEC RÉPÉTITION ESPACÉE) ---
 function launchStandardQuiz() {
     document.getElementById('quiz-mode-menu').classList.add('hidden');
     document.getElementById('quiz-classic-zone').classList.remove('hidden');
@@ -332,16 +310,15 @@ function generateQuizQuestion() {
         if (quizScore > highScores.quiz) { highScores.quiz = quizScore; saveStats(); }
         if (quizScore === 10) {
             triggerConfetti();
-            checkAndUnlockBadge("first_perfect"); // Attribution Trophée Sans Faute
+            checkAndUnlockBadge("first_perfect"); 
         }
-        alert(`Quiz terminé ! Score de votre élève : ${quizScore}/10.`);
+        alert(`🏆 Quiz terminé ! Score final : ${quizScore}/10.`);
         document.getElementById('stat-high-quiz').innerText = highScores.quiz;
         resetQuizToMenu();
         return;
     }
     document.getElementById('quiz-current').innerText = quizStep;
     
-    // ALGORITHME DE REPETITION ESPACEE INTEGREE !
     currentQuizItem = getNextExerciseWord(); 
     document.getElementById('quiz-question').innerText = currentQuizItem.en;
 
@@ -357,7 +334,7 @@ function generateQuizQuestion() {
     container.innerHTML = '';
     choices.forEach(choice => {
         const btn = document.createElement('button');
-        btn.className = "w-full bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-brandBlue dark:text-white p-3 rounded-xl font-medium text-left transition hover:border-brandBlue";
+        btn.className = "w-full bg-slate-800 border-2 border-slate-700/80 text-slate-100 p-4 rounded-2xl font-bold text-left transition-all hover:border-brandPurple hover:bg-slate-700/40";
         btn.innerText = choice;
         btn.onclick = () => checkQuizAnswer(btn, choice);
         container.appendChild(btn);
@@ -367,23 +344,22 @@ function generateQuizQuestion() {
 function checkQuizAnswer(button, selected) {
     document.querySelectorAll('#quiz-options button').forEach(b => b.disabled = true);
     if (selected === currentQuizItem.fr) {
-        button.className = "w-full bg-brandGreen text-white p-3 rounded-xl font-medium text-left transition";
+        button.className = "w-full bg-brandGreen text-slate-950 border border-brandGreen p-4 rounded-2xl font-extrabold text-left transition-all shadow-lg shadow-brandGreen/20";
         quizScore++;
         document.getElementById('quiz-score').innerText = quizScore;
-        removeError(currentQuizItem.en); // Si trouvé, on l'allège du carnet
+        removeError(currentQuizItem.en); 
         processAnswerResult(true);
     } else {
-        button.className = "w-full bg-red-500 text-white p-3 rounded-xl font-medium text-left transition";
-        registerError(currentQuizItem); // Inscription automatique au carnet d'erreur
+        button.className = "w-full bg-brandPink text-white border border-brandPink p-4 rounded-2xl font-extrabold text-left transition-all shadow-lg shadow-brandPink/20";
+        registerError(currentQuizItem); 
         processAnswerResult(false);
         document.querySelectorAll('#quiz-options button').forEach(b => {
-            if(b.innerText === currentQuizItem.fr) b.className = "w-full bg-brandGreen text-white p-3 rounded-xl font-medium text-left transition";
+            if(b.innerText === currentQuizItem.fr) b.className = "w-full bg-brandGreen text-slate-950 border border-brandGreen p-4 rounded-2xl font-extrabold text-left transition-all";
         });
     }
-    quizTimeout = setTimeout(() => { quizStep++; generateQuizQuestion(); }, 1200);
+    quizTimeout = setTimeout(() => { quizStep++; generateQuizQuestion(); }, 1400);
 }
 
-// --- MODULE 4 : MODE CONTRE-LA-MONTRE (TIME ATTACK CORRIGÉ) ---
 function launchTimeAttack() {
     document.getElementById('quiz-mode-menu').classList.add('hidden');
     document.getElementById('quiz-timeattack-zone').classList.remove('hidden');
@@ -400,13 +376,13 @@ function launchTimeAttack() {
         taTimeLeft--;
         document.getElementById('ta-timer').innerText = taTimeLeft;
         if (taTimeLeft <= 0) {
-            stopTimeAttack(true); // Arrêt avec bilan final
+            stopTimeAttack(true); 
         }
     }, 1000);
 }
 
 function generateTAQuestion() {
-    currentTAItem = getNextExerciseWord(); // Utilise aussi la répétition espacée
+    currentTAItem = getNextExerciseWord(); 
     document.getElementById('ta-question').innerText = currentTAItem.en;
 
     const activePack = fruitsData.filter(f => f.level === selectedVocabularyLevel);
@@ -421,7 +397,7 @@ function generateTAQuestion() {
     container.innerHTML = '';
     choices.forEach(choice => {
         const btn = document.createElement('button');
-        btn.className = "w-full bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-brandBlue dark:text-white p-3 rounded-xl font-medium text-left transition hover:border-brandOrange";
+        btn.className = "w-full bg-slate-800 border-2 border-slate-700/80 text-slate-100 p-4 rounded-2xl font-bold text-left transition-all hover:border-brandPink hover:bg-slate-700/40";
         btn.innerText = choice;
         btn.onclick = () => checkTAAnswer(btn, choice);
         container.appendChild(btn);
@@ -438,22 +414,20 @@ function checkTAAnswer(button, selected) {
         processAnswerResult(true);
         generateTAQuestion(); 
     } else {
-        button.className = "w-full bg-red-500 text-white p-3 rounded-xl font-medium text-left transition";
+        button.className = "w-full bg-brandPink text-white border border-brandPink p-4 rounded-2xl font-extrabold text-left transition-all";
         registerError(currentTAItem);
         processAnswerResult(false);
-        // On stocke le timeout dans notre variable globale pour pouvoir l'annuler si nécessaire
-        taTimeout = setTimeout(() => { generateTAQuestion(); }, 400);
+        taTimeout = setTimeout(() => { generateTAQuestion(); }, 500);
     }
 }
 
 function stopTimeAttack(isFinishedFinished = false) {
     clearInterval(taTimerInterval);
-    if (taTimeout) clearTimeout(taTimeout); // FIX : Annule tout changement de question imminent
+    if (taTimeout) clearTimeout(taTimeout); 
     
     if (isFinishedFinished) {
-        alert(`Fin du Chrono ! Votre élève a validé ${taScore} mots !`);
+        alert(`⏱️ Fin du Chrono ! Score : ${taScore} bonnes réponses !`);
         
-        // FIX : Vérification et déblocage du badge Chasseur de Chrono
         if (taScore >= 20) {
             checkAndUnlockBadge("time_20");
         }
@@ -467,7 +441,6 @@ function stopTimeAttack(isFinishedFinished = false) {
     }
 }
 
-// --- MODULE 5 : RECONNAISSANCE VOCALE (SPEAK MODE VIA API WEB SPEECH) ---
 function initSpeak() {
     speakScore = 0;
     document.getElementById('speak-score').innerText = speakScore;
@@ -475,26 +448,26 @@ function initSpeak() {
 }
 
 function generateSpeakQuestion() {
-    currentSpeakItem = getNextExerciseWord(); // Utilisation de la répétition espacée !
+    currentSpeakItem = getNextExerciseWord(); 
     
     document.getElementById('speak-emoji').innerText = currentSpeakItem.emoji;
     document.getElementById('speak-prompt-fr').innerText = currentSpeakItem.fr;
     
     const resultBox = document.getElementById('speech-result');
-    resultBox.className = "hidden text-base font-bold p-3 rounded-xl";
-    document.getElementById('speech-status').innerText = "Cliquez sur le micro pour parler";
+    resultBox.className = "hidden text-base font-bold p-4 rounded-2xl border transition-all duration-300";
+    document.getElementById('speech-status').innerText = "Clique sur le micro rouge pour parler";
     document.getElementById('mic-pulse').classList.add('hidden');
 }
 
 function startSpeechRecognition() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-        alert("La reconnaissance vocale n'est pas supportée par ce navigateur. Veuillez utiliser Google Chrome ou Safari.");
+        alert("Microphone non disponible sur ce navigateur. Utilise Chrome ou Safari.");
         return;
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US'; // On force la capture en Anglais
+    recognition.lang = 'en-US'; 
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
@@ -503,8 +476,8 @@ function startSpeechRecognition() {
     const resultBox = document.getElementById('speech-result');
 
     pulse.classList.remove('hidden');
-    statusText.innerText = "Écoute active... Vos élèves peuvent parler !";
-    resultBox.className = "hidden text-base font-bold p-3 rounded-xl";
+    statusText.innerText = "🎙️ Écoute active... Parle maintenant !";
+    resultBox.className = "hidden text-base font-bold p-4 rounded-2xl border transition-all duration-300";
 
     recognition.start();
 
@@ -513,11 +486,11 @@ function startSpeechRecognition() {
         const targetWord = currentSpeakItem.en.toLowerCase();
         
         resultBox.classList.remove('hidden');
-        resultBox.innerHTML = `L'élève a dit : <span class="italic">"${speechResult}"</span>`;
+        resultBox.innerHTML = `Reconnu : <span class="text-white font-mono bg-black/30 px-2 py-1 rounded border border-slate-700">"${speechResult}"</span>`;
 
         if (speechResult === targetWord) {
-            resultBox.classList.add('bg-green-100', 'text-green-700', 'dark:bg-green-900/30', 'dark:text-green-400');
-            statusText.innerText = "Excellente prononciation ! +10 XP";
+            resultBox.classList.add('bg-brandGreen/20', 'text-brandGreen', 'border-brandGreen/30');
+            statusText.innerHTML = "🎯 <span class='text-brandGreen font-bold'>Parfait ! +10 XP</span>";
             
             speakScore++;
             document.getElementById('speak-score').innerText = speakScore;
@@ -530,15 +503,13 @@ function startSpeechRecognition() {
 
             removeError(currentSpeakItem.en); 
             processAnswerResult(true);
-            
-            // Passe au mot suivant automatiquement après 2 secondes
             speakTimeout = setTimeout(() => generateSpeakQuestion(), 2000);
 
         } else {
-            resultBox.classList.add('bg-red-100', 'text-red-700', 'dark:bg-red-900/30', 'dark:text-red-400');
-            statusText.innerText = "Essaye encore ! (Vérifie le mot attendu)";
+            resultBox.classList.add('bg-brandPink/20', 'text-brandPink', 'border-brandPink/30');
+            statusText.innerText = "Essaye encore ! Focalise sur la bonne prononciation.";
             
-            registerError(currentSpeakItem); // Ajout au carnet d'erreurs
+            registerError(currentSpeakItem); 
             processAnswerResult(false);
         }
     };
@@ -550,13 +521,12 @@ function startSpeechRecognition() {
 
     recognition.onerror = () => {
         pulse.classList.add('hidden');
-        statusText.innerText = "Le micro n'a rien détecté. Réessayez.";
+        statusText.innerText = "Zut ! Aucun son détecté. Recommence.";
     };
 }
 
-// --- MODULE 6 : MATCHING GAME V2 (CORRIGÉ ET SÉCURISÉ) ---
 function initMatching() {
-    isProcessingMatch = false; // Reset du verrou
+    isProcessingMatch = false; 
     const grid = document.getElementById('matching-grid'); 
     if(!grid) return;
     grid.innerHTML = '';
@@ -566,72 +536,83 @@ function initMatching() {
     
     let englishCards = shuffled.map(f => ({ text: f.en, type: 'en', id: f.en }));
     let frenchCards = shuffled.map(f => ({ text: f.fr, type: 'fr', id: f.en }));
-    englishCards.sort(() => Math.random() - 0.5).slice(0,4); 
-    frenchCards.sort(() => Math.random() - 0.5).slice(0,4);
+    englishCards.sort(() => Math.random() - 0.5); 
+    frenchCards.sort(() => Math.random() - 0.5);
 
-    for(let i=0; i < englishCards.length; i++) {
-        const btnEn = document.createElement('button');
-        btnEn.className = "bg-white dark:bg-gray-800 border-2 border-brandBlue text-brandBlue dark:text-cyan-400 p-3 rounded-xl font-bold transition text-center text-xs sm:text-sm";
-        btnEn.innerText = englishCards[i].text; btnEn.onclick = () => { btnEn.dataset.id = englishCards[i].id; btnEn.dataset.type = 'en'; handleMatchSelect(btnEn); };
-
-        const btnFr = document.createElement('button');
-        btnFr.className = "bg-white dark:bg-gray-800 border-2 border-brandOrange text-brandOrange p-3 rounded-xl font-bold transition text-center text-xs sm:text-sm";
-        btnFr.innerText = frenchCards[i].text; btnFr.onclick = () => { btnFr.dataset.id = frenchCards[i].id; btnFr.dataset.type = 'fr'; handleMatchSelect(btnFr); };
-
-        grid.appendChild(btnEn); grid.appendChild(btnFr);
+    const mergedCards = [];
+    for(let i=0; i < 4; i++) {
+        mergedCards.push(englishCards[i]);
+        mergedCards.push(frenchCards[i]);
     }
+    // Mélange total de la grille pour le côté puzzle addictif
+    mergedCards.sort(() => Math.random() - 0.5);
+
+    mergedCards.forEach(card => {
+        const btn = document.createElement('button');
+        if (card.type === 'en') {
+            btn.className = "bg-slate-800 border-2 border-brandPurple text-brandPurple p-4 rounded-2xl font-black transition-all text-center text-xs sm:text-sm hover:bg-brandPurple/10 shadow-md";
+        } else {
+            btn.className = "bg-slate-800 border-2 border-brandPink text-brandPink p-4 rounded-2xl font-black transition-all text-center text-xs sm:text-sm hover:bg-brandPink/10 shadow-md";
+        }
+        btn.innerText = card.text;
+        btn.onclick = () => { 
+            btn.dataset.id = card.id; 
+            btn.dataset.type = card.type; 
+            handleMatchSelect(btn); 
+        };
+        grid.appendChild(btn);
+    });
 }
 
 function handleMatchSelect(node) {
     if (isProcessingMatch) return;
 
     if (node.dataset.type === 'en') {
-        if (selectedEnglishNode) selectedEnglishNode.classList.remove('bg-brandBlue/20', 'dark:bg-brandBlue/40');
-        selectedEnglishNode = node; selectedEnglishNode.classList.add('bg-brandBlue/20', 'dark:bg-brandBlue/40');
+        if (selectedEnglishNode) selectedEnglishNode.classList.remove('bg-brandPurple/30', 'scale-105');
+        selectedEnglishNode = node; 
+        selectedEnglishNode.classList.add('bg-brandPurple/30', 'scale-105');
     } else {
-        if (selectedFrenchNode) selectedFrenchNode.classList.remove('bg-brandOrange/20', 'dark:bg-brandOrange/40');
-        selectedFrenchNode = node; selectedFrenchNode.classList.add('bg-brandOrange/20', 'dark:bg-brandOrange/40');
+        if (selectedFrenchNode) selectedFrenchNode.classList.remove('bg-brandPink/30', 'scale-105');
+        selectedFrenchNode = node; 
+        selectedFrenchNode.classList.add('bg-brandPink/30', 'scale-105');
     }
 
     if (selectedEnglishNode && selectedFrenchNode) {
         if (selectedEnglishNode.dataset.id === selectedFrenchNode.dataset.id) {
-            // FIX : Ajout de la classe 'matched-card' pour le suivi de la victoire
-            selectedEnglishNode.className = "bg-brandGreen text-white p-3 rounded-xl font-bold text-center pointer-events-none transition text-xs sm:text-sm matched-card";
-            selectedFrenchNode.className = "bg-brandGreen text-white p-3 rounded-xl font-bold text-center pointer-events-none transition text-xs sm:text-sm matched-card";
+            selectedEnglishNode.className = "bg-brandGreen text-slate-950 border border-brandGreen p-4 rounded-2xl font-black text-center pointer-events-none transition-all text-xs sm:text-sm matched-card shadow-lg shadow-brandGreen/20";
+            selectedFrenchNode.className = "bg-brandGreen text-slate-950 border border-brandGreen p-4 rounded-2xl font-black text-center pointer-events-none transition-all text-xs sm:text-sm matched-card shadow-lg shadow-brandGreen/20";
             removeError(selectedEnglishNode.dataset.id);
             processAnswerResult(true);
             selectedEnglishNode = null; selectedFrenchNode = null;
 
-            // FIX : Détection de la victoire (8 cartes au total passées au vert)
             const totalMatched = document.querySelectorAll('.matched-card').length;
             if (totalMatched === 8) {
                 setTimeout(() => {
                     triggerConfetti();
-                    alert("Félicitations ! Toutes les paires ont été associées avec succès !");
-                    initMatching(); // Relance automatiquement une nouvelle grille
+                    alert("🎉 Incroyable ! Grille complétée avec succès !");
+                    initMatching(); 
                 }, 500);
             }
         } else {
             isProcessingMatch = true; 
             const eNode = selectedEnglishNode, fNode = selectedFrenchNode;
-            eNode.className = "bg-red-500 text-white p-3 rounded-xl font-bold text-center transition text-xs sm:text-sm";
-            fNode.className = "bg-red-500 text-white p-3 rounded-xl font-bold text-center transition text-xs sm:text-sm";
+            eNode.className = "bg-brandPink text-white border border-brandPink p-4 rounded-2xl font-black text-center transition-all text-xs sm:text-sm shadow-lg shadow-brandPink/20 animate-shake";
+            fNode.className = "bg-brandPink text-white border border-brandPink p-4 rounded-2xl font-black text-center transition-all text-xs sm:text-sm shadow-lg shadow-brandPink/20 animate-shake";
             
             const failFruit = fruitsData.find(f => f.en === eNode.dataset.id);
             if(failFruit) registerError(failFruit);
             
             processAnswerResult(false);
             setTimeout(() => {
-                eNode.className = "bg-white dark:bg-gray-800 border-2 border-brandBlue text-brandBlue dark:text-cyan-400 p-3 rounded-xl font-bold transition text-center text-xs sm:text-sm";
-                fNode.className = "bg-white dark:bg-gray-800 border-2 border-brandOrange text-brandOrange p-3 rounded-xl font-bold transition text-center text-xs sm:text-sm";
+                eNode.className = "bg-slate-800 border-2 border-brandPurple text-brandPurple p-4 rounded-2xl font-black transition-all text-center text-xs sm:text-sm hover:bg-brandPurple/10";
+                fNode.className = "bg-slate-800 border-2 border-brandPink text-brandPink p-4 rounded-2xl font-black transition-all text-center text-xs sm:text-sm hover:bg-brandPink/10";
                 isProcessingMatch = false; 
-            }, 800);
+            }, 900);
             selectedEnglishNode = null; selectedFrenchNode = null;
         }
     }
 }
 
-// --- MODULE 7 : CRÉATION DE LA VITRINE DES TROPHÉES ---
 function renderBadgesUI() {
     const container = document.getElementById('badges-list');
     if(!container) return;
@@ -640,45 +621,46 @@ function renderBadgesUI() {
     badgesDatabase.forEach(badge => {
         const isUnlocked = unlockedBadges.includes(badge.id);
         const div = document.createElement('div');
-        div.className = `p-3 rounded-xl border flex items-center gap-3 transition ${isUnlocked ? 'bg-white dark:bg-gray-800 border-green-200 dark:border-green-900/40 opacity-100 shadow-sm' : 'bg-gray-50 dark:bg-gray-900/50 border-gray-200 dark:border-gray-800 opacity-40'}`;
+        div.className = `p-4 rounded-2xl border transition-all ${isUnlocked ? 'bg-slate-900 border-slate-700/80 opacity-100 shadow-xl' : 'bg-slate-950/40 border-slate-800/80 opacity-40 select-none'}`;
         
         div.innerHTML = `
-            <div class="w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-inner ${isUnlocked ? badge.color + ' text-white' : 'bg-gray-300 text-gray-500 dark:bg-gray-700'}">
-                ${badge.icon}
-            </div>
-            <div class="text-left">
-                <h4 class="font-bold text-xs text-brandBlue dark:text-white flex items-center gap-1">
-                    ${badge.title} 
-                    ${isUnlocked ? '<i class="fa-solid fa-circle-check text-brandGreen text-[10px]"></i>' : ''}
-                </h4>
-                <p class="text-[10px] text-gray-400 font-medium leading-tight">${badge.desc}</p>
+            <div class="flex items-center gap-3.5">
+                <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-inner ${isUnlocked ? badge.color + ' text-white shadow-lg' : 'bg-slate-800 text-slate-600'}">
+                    ${badge.icon}
+                </div>
+                <div class="text-left flex-grow">
+                    <h4 class="font-extrabold text-sm text-slate-100 flex items-center gap-1.5">
+                        ${badge.title} 
+                        ${isUnlocked ? '<i class="fa-solid fa-circle-check text-brandGreen text-xs"></i>' : ''}
+                    </h4>
+                    <p class="text-[11px] text-slate-400 font-medium leading-normal mt-0.5">${badge.desc}</p>
+                </div>
             </div>
         `;
         container.appendChild(div);
     });
 }
 
-// --- MODULE 8 : AFFICHAGE DU CARNET DE RÉVISIONS ---
 function renderErrorHistory() {
     const container = document.getElementById('error-history-list');
     if (!container) return;
     container.innerHTML = '';
 
     if (errorHistory.length === 0) {
-        container.innerHTML = `<p class="text-gray-400 italic text-center text-xs py-4">Aucune erreur enregistrée, félicitations à vos élèves !</p>`;
+        container.innerHTML = `<p class="text-slate-500 italic text-center text-xs py-6 font-bold">✨ Aucune erreur en cours, tu gères grave !</p>`;
         return;
     }
 
     errorHistory.forEach(item => {
         const div = document.createElement('div');
-        div.className = "flex items-center justify-between p-2 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40 rounded-lg text-xs";
+        div.className = "flex items-center justify-between p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs font-semibold shadow-inner";
         div.innerHTML = `
-            <div class="flex items-center gap-2">
-                <span>${item.emoji}</span>
-                <span class="font-bold text-brandBlue dark:text-red-300">${item.en}</span>
-                <span class="text-gray-400">(${item.fr}) - Liste ${item.level}</span>
+            <div class="flex items-center gap-2.5">
+                <span class="text-lg">${item.emoji}</span>
+                <span class="font-black text-brandPink">${item.en}</span>
+                <span class="text-slate-400 font-normal">(${item.fr})</span>
             </div>
-            <button onclick="clearWordFromRevision('${item.en}')" class="text-brandGreen hover:underline font-bold transition text-[10px]" title="Marquer comme validé">
+            <button onclick="clearWordFromRevision('${item.en}')" class="text-brandGreen bg-brandGreen/10 border border-brandGreen/20 px-2 py-1 rounded-lg font-bold hover:bg-brandGreen hover:text-slate-950 transition-all text-[11px]">
                 <i class="fa-solid fa-check"></i> Acquis
             </button>
         `;
